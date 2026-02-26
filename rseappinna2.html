@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>מעקב הוצאות והכנסות</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background:#f4f4f4; }
+    h1 { text-align:center; }
+    .card { background:white; padding:15px; margin-bottom:15px; border-radius:8px; }
+    .income { color:green; }
+    .expense { color:red; }
+    .fund { color:blue; }
+    button { padding:6px 12px; cursor:pointer; }
+    input, select { padding:5px; margin:5px 0; }
+  </style>
+</head>
+<body>
+
+<h1>מעקב הוצאות והכנסות חודשי</h1>
+
+<div class="card">
+  <h3>סיכום חודשי</h3>
+  <p>הכנסות: ₪ <span id="totalIncome">0</span></p>
+  <p>קרן כספית: ₪ <span id="totalFund">0</span></p>
+  <p>הוצאות: ₪ <span id="totalExpenses">0</span></p>
+  <h3>מאזן חודשי: ₪ <span id="balance">0</span></h3>
+</div>
+
+<div class="card">
+  <h3>הוספת תנועה</h3>
+
+  <select id="type">
+    <option value="income">הכנסה</option>
+    <option value="expense">הוצאה</option>
+    <option value="fund">הפקדה לקרן כספית</option>
+  </select>
+
+  <select id="category"></select>
+
+  <input type="number" id="amount" placeholder="סכום">
+  <input type="text" id="description" placeholder="תיאור">
+  <button onclick="addTransaction()">הוסף</button>
+</div>
+
+<div class="card">
+  <h3>רשימת תנועות החודש</h3>
+  <ul id="transactionsList"></ul>
+</div>
+
+<script>
+let transactions = [];
+
+const incomeCategories = ["משכורת", "דמי שכירות", "הכנסה אחרת"];
+const expenseCategories = ["רכישה", "קניות", "אוכל", "בילויים", "חשבונות"];
+
+const typeSelect = document.getElementById("type");
+const categorySelect = document.getElementById("category");
+
+function updateCategories() {
+  const type = typeSelect.value;
+  const categories = type === "income" ? incomeCategories :
+                     type === "expense" ? expenseCategories :
+                     ["קרן כספית"];
+
+  categorySelect.innerHTML = "";
+  categories.forEach(cat => {
+    const option = document.createElement("option");
+    option.value = cat;
+    option.textContent = cat;
+    categorySelect.appendChild(option);
+  });
+}
+
+typeSelect.addEventListener("change", updateCategories);
+updateCategories();
+
+function addTransaction() {
+  const type = typeSelect.value;
+  const category = categorySelect.value;
+  const amount = parseFloat(document.getElementById("amount").value);
+  const description = document.getElementById("description").value;
+
+  if (!amount) return;
+
+  transactions.push({
+    type,
+    category,
+    amount,
+    description,
+    date: new Date()
+  });
+
+  document.getElementById("amount").value = "";
+  document.getElementById("description").value = "";
+
+  render();
+}
+
+function render() {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  const monthly = transactions.filter(t =>
+    t.date.getMonth() === month &&
+    t.date.getFullYear() === year
+  );
+
+  let income = 0, expenses = 0, fund = 0;
+
+  monthly.forEach(t => {
+    if (t.type === "income") income += t.amount;
+    else if (t.type === "expense") expenses += t.amount;
+    else if (t.type === "fund") fund += t.amount;
+  });
+
+  const balance = income + fund - expenses;
+
+  document.getElementById("totalIncome").textContent = income;
+  document.getElementById("totalExpenses").textContent = expenses;
+  document.getElementById("totalFund").textContent = fund;
+  document.getElementById("balance").textContent = balance;
+
+  const list = document.getElementById("transactionsList");
+  list.innerHTML = "";
+
+  monthly.forEach(t => {
+    const li = document.createElement("li");
+    li.className = t.type;
+    li.textContent =
+      `${t.date.toLocaleDateString("he-IL")} | ${t.category} | ${t.description} | ${t.type === "expense" ? "-" : "+"} ₪ ${t.amount}`;
+    list.appendChild(li);
+  });
+}
+</script>
+
+</body>
+</html>
