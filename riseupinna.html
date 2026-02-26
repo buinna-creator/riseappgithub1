@@ -1,0 +1,195 @@
+import React, { useState, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion } from "framer-motion";
+
+export default function ExpenseIncomeTrackerApp() {
+  const [transactions, setTransactions] = useState([]);
+  const [type, setType] = useState("income");
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+
+  const incomeCategories = ["משכורת", "דמי שכירות", "הכנסה אחרת"];
+  const expenseCategories = ["רכישה", "קניות", "אוכל", "בילויים", "חשבונות"];
+
+  const addTransaction = () => {
+    if (!amount || !category) return;
+
+    const newTransaction = {
+      id: Date.now(),
+      type,
+      category,
+      amount: parseFloat(amount),
+      description,
+      date: new Date(),
+    };
+
+    setTransactions([newTransaction, ...transactions]);
+    setAmount("");
+    setCategory("");
+    setDescription("");
+  };
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const monthlyTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+  }, [transactions]);
+
+  const totals = useMemo(() => {
+    const income = monthlyTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const expenses = monthlyTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const fund = monthlyTransactions
+      .filter((t) => t.type === "fund")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const balance = income + fund - expenses;
+
+    return { income, expenses, fund, balance };
+  }, [monthlyTransactions]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+      <div className="max-w-5xl mx-auto grid gap-6">
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-bold text-center"
+        >
+          מעקב הוצאות והכנסות חודשי
+        </motion.h1>
+
+        {/* סיכום */}
+        <div className="grid md:grid-cols-4 gap-4">
+          <Card className="rounded-2xl shadow-md">
+            <CardContent className="p-4">
+              <p className="text-sm">הכנסות</p>
+              <p className="text-xl font-semibold text-green-600">₪ {totals.income}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl shadow-md">
+            <CardContent className="p-4">
+              <p className="text-sm">קרן כספית</p>
+              <p className="text-xl font-semibold text-blue-600">₪ {totals.fund}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl shadow-md">
+            <CardContent className="p-4">
+              <p className="text-sm">הוצאות</p>
+              <p className="text-xl font-semibold text-red-600">₪ {totals.expenses}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl shadow-md">
+            <CardContent className="p-4">
+              <p className="text-sm">מאזן חודשי</p>
+              <p className={`text-xl font-semibold ${totals.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                ₪ {totals.balance}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* הוספת תנועה */}
+        <Card className="rounded-2xl shadow-md">
+          <CardContent className="p-6 grid md:grid-cols-5 gap-4 items-end">
+            <Select onValueChange={setType} defaultValue="income">
+              <SelectTrigger>
+                <SelectValue placeholder="סוג" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="income">הכנסה</SelectItem>
+                <SelectItem value="expense">הוצאה</SelectItem>
+                <SelectItem value="fund">הפקדה לקרן כספית</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="קטגוריה" />
+              </SelectTrigger>
+              <SelectContent>
+                {(type === "income" ? incomeCategories : expenseCategories).map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="number"
+              placeholder="סכום"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+
+            <Input
+              placeholder="תיאור"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+
+            <Button onClick={addTransaction} className="rounded-2xl">
+              הוסף
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* רשימת תנועות */}
+        <Card className="rounded-2xl shadow-md">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold mb-4">רשימת תנועות החודש</h2>
+            <div className="space-y-3">
+              {monthlyTransactions.length === 0 && (
+                <p className="text-gray-500 text-sm">אין תנועות בחודש זה</p>
+              )}
+
+              {monthlyTransactions.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm"
+                >
+                  <div>
+                    <p className="font-medium">{t.category}</p>
+                    <p className="text-sm text-gray-500">{t.description}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(t.date).toLocaleDateString("he-IL")}
+                    </p>
+                  </div>
+
+                  <p
+                    className={`font-semibold ${
+                      t.type === "income"
+                        ? "text-green-600"
+                        : t.type === "fund"
+                        ? "text-blue-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {t.type === "expense" ? "-" : "+"} ₪ {t.amount}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
